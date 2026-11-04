@@ -1,0 +1,29 @@
+name: Build Rabbit LCD (single board)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: espressif/idf:v6.1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Build bread-compact-wifi-lcd
+        shell: bash
+        run: |
+          source "$IDF_PATH/export.sh"
+          python scripts/build.py bread-compact-wifi-lcd --name bread-compact-wifi-lcd
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: xiaozhi_bread-compact-wifi-lcd_${{ github.sha }}
+          path: build/merged-binary.bin
+          if-no-files-found: error

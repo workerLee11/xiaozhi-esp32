@@ -96,6 +96,13 @@ void Application::Initialize() {
     // Add state change listeners
     state_machine_.AddStateChangeListener([this](DeviceState old_state, DeviceState new_state) {
         xEventGroupSetBits(event_group_, MAIN_EVENT_STATE_CHANGED);
+        // 角色屏：音频真正起播/播完时驱动兔子嘴动
+        auto display = Board::GetInstance().GetDisplay();
+        if (new_state == kDeviceStateSpeaking && old_state != kDeviceStateSpeaking) {
+            display->OnAudioStart();
+        } else if (old_state == kDeviceStateSpeaking && new_state != kDeviceStateSpeaking) {
+            display->OnAudioStop();
+        }
     });
 
     // Start the clock timer to update the status bar

@@ -46,6 +46,10 @@ public:
     virtual void SetEmotion(const char* emotion);
     virtual void SetChatMessage(const char* role, const char* content);
     virtual void ClearChatMessages();
+    // 音频播放起止回调：TTS 开始/结束时由 Application 调用。
+    // 默认空实现，角色屏等子类可重写以驱动嘴动等动画。
+    virtual void OnAudioStart() {}
+    virtual void OnAudioStop() {}
     virtual void SetTheme(Theme* theme);
     virtual Theme* GetTheme() { return current_theme_; }
     virtual void UpdateStatusBar(bool update_all = false);
