@@ -1,18 +1,6 @@
 #include "character_assets.h"
 
 // 由 convert.py 自动生成，请勿手改。
-const lv_image_dsc_t rabbit_neutral = {
-  .header = {
-    .magic = LV_IMAGE_HEADER_MAGIC,
-    .cf = LV_COLOR_FORMAT_RGB565,
-    .flags = 0,
-    .w = 240,
-    .h = 320,
-    .stride = 480,
-    .reserved = {0, 0, 0},
-  },
-  .data = rabbit_neutral_map,
-};
 const uint8_t rabbit_neutral_map[] = {
   0x39, 0xDF, 0x19, 0xDF, 0x19, 0xDF, 0x19, 0xDF, 0x39, 0xE7, 0x39, 0xE7,
   0x39, 0xE7, 0x39, 0xE7, 0x39, 0xE7, 0x19, 0xDF, 0x19, 0xE7, 0x39, 0xE7,
@@ -12816,7 +12804,7 @@ const uint8_t rabbit_neutral_map[] = {
   0xF8, 0xD6, 0xF8, 0xD6, 0xF8, 0xD6, 0xF8, 0xD6, 0xF8, 0xD6, 0xF8, 0xD6,
 };  // 153600 bytes
 
-const lv_image_dsc_t rabbit_talk = {
+const lv_image_dsc_t rabbit_neutral = {
   .header = {
     .magic = LV_IMAGE_HEADER_MAGIC,
     .cf = LV_COLOR_FORMAT_RGB565,
@@ -12824,10 +12812,12 @@ const lv_image_dsc_t rabbit_talk = {
     .w = 240,
     .h = 320,
     .stride = 480,
-    .reserved = {0, 0, 0},
+    .reserved_2 = 0,
   },
-  .data = rabbit_talk_map,
-};
+  .data_size = sizeof(rabbit_neutral_map),
+  .data = rabbit_neutral_map,
+};  // 闭嘴/浅笑（待命/中性）
+
 const uint8_t rabbit_talk_map[] = {
   0xF8, 0xDE, 0xF8, 0xDE, 0xF8, 0xDE, 0xF8, 0xDE, 0x18, 0xDF, 0x18, 0xDF,
   0x18, 0xDF, 0x18, 0xDF, 0xF8, 0xDE, 0xF8, 0xDE, 0xF8, 0xDE, 0x18, 0xDF,
@@ -25631,7 +25621,7 @@ const uint8_t rabbit_talk_map[] = {
   0xB8, 0xCE, 0xB8, 0xCE, 0xB8, 0xCE, 0xB8, 0xCE, 0xB8, 0xCE, 0xB8, 0xCE,
 };  // 153600 bytes
 
-const lv_image_dsc_t rabbit_happy = {
+const lv_image_dsc_t rabbit_talk = {
   .header = {
     .magic = LV_IMAGE_HEADER_MAGIC,
     .cf = LV_COLOR_FORMAT_RGB565,
@@ -25639,10 +25629,12 @@ const lv_image_dsc_t rabbit_happy = {
     .w = 240,
     .h = 320,
     .stride = 480,
-    .reserved = {0, 0, 0},
+    .reserved_2 = 0,
   },
-  .data = rabbit_happy_map,
-};
+  .data_size = sizeof(rabbit_talk_map),
+  .data = rabbit_talk_map,
+};  // 张嘴（中性说话）
+
 const uint8_t rabbit_happy_map[] = {
   0x18, 0xDF, 0x18, 0xDF, 0xF8, 0xDE, 0x18, 0xDF, 0x18, 0xDF, 0x18, 0xDF,
   0x19, 0xDF, 0x18, 0xDF, 0x18, 0xDF, 0x18, 0xDF, 0x18, 0xDF, 0x19, 0xDF,
@@ -38446,7 +38438,7 @@ const uint8_t rabbit_happy_map[] = {
   0xD8, 0xCE, 0xD8, 0xCE, 0xD8, 0xCE, 0xD8, 0xCE, 0xD8, 0xCE, 0xD8, 0xCE,
 };  // 153600 bytes
 
-const lv_image_dsc_t rabbit_happy_talk = {
+const lv_image_dsc_t rabbit_happy = {
   .header = {
     .magic = LV_IMAGE_HEADER_MAGIC,
     .cf = LV_COLOR_FORMAT_RGB565,
@@ -38454,10 +38446,12 @@ const lv_image_dsc_t rabbit_happy_talk = {
     .w = 240,
     .h = 320,
     .stride = 480,
-    .reserved = {0, 0, 0},
+    .reserved_2 = 0,
   },
-  .data = rabbit_happy_talk_map,
-};
+  .data_size = sizeof(rabbit_happy_map),
+  .data = rabbit_happy_map,
+};  // 闭嘴（开心）
+
 const uint8_t rabbit_happy_talk_map[] = {
   0xD8, 0xD6, 0xD8, 0xD6, 0xD7, 0xD6, 0xD7, 0xD6, 0xD8, 0xD6, 0xD8, 0xD6,
   0xD8, 0xDE, 0xD8, 0xD6, 0xD8, 0xD6, 0xD8, 0xD6, 0xD7, 0xD6, 0xD8, 0xD6,
@@ -51261,7 +51255,7 @@ const uint8_t rabbit_happy_talk_map[] = {
   0x97, 0xCE, 0x97, 0xCE, 0x97, 0xCE, 0x97, 0xCE, 0x97, 0xCE, 0x97, 0xCE,
 };  // 153600 bytes
 
-const lv_image_dsc_t rabbit_think = {
+const lv_image_dsc_t rabbit_happy_talk = {
   .header = {
     .magic = LV_IMAGE_HEADER_MAGIC,
     .cf = LV_COLOR_FORMAT_RGB565,
@@ -51269,10 +51263,12 @@ const lv_image_dsc_t rabbit_think = {
     .w = 240,
     .h = 320,
     .stride = 480,
-    .reserved = {0, 0, 0},
+    .reserved_2 = 0,
   },
-  .data = rabbit_think_map,
-};
+  .data_size = sizeof(rabbit_happy_talk_map),
+  .data = rabbit_happy_talk_map,
+};  // 张嘴（开心说话/大笑）
+
 const uint8_t rabbit_think_map[] = {
   0xF8, 0xDE, 0xF8, 0xDE, 0xF8, 0xDE, 0xF8, 0xDE, 0x18, 0xDF, 0xF8, 0xDE,
   0x18, 0xDF, 0xF8, 0xDE, 0xF8, 0xDE, 0xF8, 0xDE, 0xF8, 0xDE, 0x18, 0xDF,
@@ -64076,7 +64072,7 @@ const uint8_t rabbit_think_map[] = {
   0xB8, 0xCE, 0xB8, 0xCE, 0xB8, 0xCE, 0xB8, 0xCE, 0xB8, 0xCE, 0xB8, 0xCE,
 };  // 153600 bytes
 
-const lv_image_dsc_t rabbit_think_talk = {
+const lv_image_dsc_t rabbit_think = {
   .header = {
     .magic = LV_IMAGE_HEADER_MAGIC,
     .cf = LV_COLOR_FORMAT_RGB565,
@@ -64084,10 +64080,12 @@ const lv_image_dsc_t rabbit_think_talk = {
     .w = 240,
     .h = 320,
     .stride = 480,
-    .reserved = {0, 0, 0},
+    .reserved_2 = 0,
   },
-  .data = rabbit_think_talk_map,
-};
+  .data_size = sizeof(rabbit_think_map),
+  .data = rabbit_think_map,
+};  // 闭嘴（思考）
+
 const uint8_t rabbit_think_talk_map[] = {
   0xD7, 0xD6, 0xD7, 0xD6, 0xB7, 0xD6, 0xD7, 0xD6, 0xD8, 0xD6, 0xD8, 0xD6,
   0xD8, 0xD6, 0xD8, 0xD6, 0xD7, 0xD6, 0xD7, 0xD6, 0xD7, 0xD6, 0xD8, 0xD6,
@@ -76890,4 +76888,18 @@ const uint8_t rabbit_think_talk_map[] = {
   0x97, 0xC6, 0x97, 0xC6, 0x97, 0xC6, 0x97, 0xC6, 0x97, 0xC6, 0x97, 0xC6,
   0x97, 0xC6, 0x97, 0xC6, 0x97, 0xC6, 0x97, 0xC6, 0x97, 0xC6, 0x97, 0xC6,
 };  // 153600 bytes
+
+const lv_image_dsc_t rabbit_think_talk = {
+  .header = {
+    .magic = LV_IMAGE_HEADER_MAGIC,
+    .cf = LV_COLOR_FORMAT_RGB565,
+    .flags = 0,
+    .w = 240,
+    .h = 320,
+    .stride = 480,
+    .reserved_2 = 0,
+  },
+  .data_size = sizeof(rabbit_think_talk_map),
+  .data = rabbit_think_talk_map,
+};  // 张嘴（思考说话）
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "lcd_display.h"
+#include "character_assets.h"  // 提供 rabbit_neutral 等 6 帧 extern 声明
 
 // 角色屏显示：在官方面包板 LCD 板型上叠加一只「会说话的兔子」。
 // 原理：继承 SpiLcdDisplay，复用其全部 SPI/LVGL 初始化；
