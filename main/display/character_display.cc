@@ -184,7 +184,7 @@ void CharacterLcdDisplay::SetupUI() {
         lv_obj_set_style_text_font(battery_pct_, &BUILTIN_TEXT_FONT, 0);
         // 初始颜色跟随官方图标，保证和电池图标同色
         lv_obj_set_style_text_color(battery_pct_,
-                                    lv_obj_get_style_text_color(battery_label_, 0), 0);
+                                    lv_obj_get_style_text_color(battery_label_, LV_PART_MAIN), 0);
         lv_obj_set_style_margin_left(battery_pct_, 3, 0);
         // 固定宽度 + 右对齐：百分比从 9% 变 10% 时宽度不变，
         // 避免 flex 容器重新排布导致顶栏更大面积重绘。
@@ -250,13 +250,13 @@ void CharacterLcdDisplay::BatteryTimerCb(lv_timer_t* t) {
     self->last_charging_ = charging;
 
     // 配色：充电 -> 绿；低电量（<=20%）-> 橙红；其余跟随官方电池图标色
-    lv_color_t color = lv_obj_get_style_text_color(self->battery_pct_, 0);
+    lv_color_t color = lv_obj_get_style_text_color(self->battery_pct_, LV_PART_MAIN);
     if (charging) {
         color = lv_color_hex(0x1D9E75);
     } else if (level <= 20) {
         color = lv_color_hex(0xD85A30);
     } else if (self->battery_label_ != nullptr) {
-        color = lv_obj_get_style_text_color(self->battery_label_, 0);
+        color = lv_obj_get_style_text_color(self->battery_label_, LV_PART_MAIN);
     }
 
     lv_obj_set_style_text_color(self->battery_pct_, color, 0);
