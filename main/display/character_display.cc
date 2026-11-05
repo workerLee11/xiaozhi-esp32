@@ -30,6 +30,20 @@ lv_color_t MouthColor(int emotion) {
     }
 }
 
+// 自检画面用的小色块 / 线条（纯 LVGL 对象，无字体依赖）
+void AddRect(lv_obj_t* parent, int x, int y, int w, int h, lv_color_t color) {
+    lv_obj_t* o = lv_obj_create(parent);
+    lv_obj_set_size(o, w, h);
+    lv_obj_set_pos(o, x, y);
+    lv_obj_set_style_bg_color(o, color, 0);
+    lv_obj_set_style_bg_opa(o, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(o, 0, 0);
+    lv_obj_set_style_radius(o, 0, 0);
+    lv_obj_set_style_pad_all(o, 0, 0);
+    lv_obj_clear_flag(o, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_clear_flag(o, LV_OBJ_FLAG_CLICKABLE);
+}
+
 }  // namespace
 
 CharacterLcdDisplay::CharacterLcdDisplay(
@@ -38,6 +52,11 @@ CharacterLcdDisplay::CharacterLcdDisplay(
     bool mirror_x, bool mirror_y, bool swap_xy)
     : SpiLcdDisplay(panel_io, panel, width, height, offset_x, offset_y,
                     mirror_x, mirror_y, swap_xy) {
+    offset_x_ = offset_x;
+    offset_y_ = offset_y;
+    mirror_x_ = mirror_x;
+    mirror_y_ = mirror_y;
+    swap_xy_ = swap_xy;
     // SetupUI() 由 Application 在对象构造完成后以虚函数调用。
 }
 
@@ -81,6 +100,54 @@ void CharacterLcdDisplay::SetupUI() {
     // 只设置这一次，运行期永不更换 => 永不产生全屏重绘。
     lv_obj_set_style_bg_image_src(screen, &rabbit_neutral, 0);
 
+    // ---- 开机自检画面（CHARACTER_SELFTEST_MS 后自动删除）----
+    // 判断方法：
+    //   四条白边都完整          -> 分辨率 / offset 正确
+    //   右边或下边缺失 / 图被切 -> 面板实际分辨率与编译配置不一致
+    //   四角颜色为 红/绿/蓝/白   -> RGB 顺序正确（红蓝互换 = BGR 配错）
+    //   中心十字正好在正中      -> 无偏移
+    //   出现横向撕裂 / 斜纹     -> SPI 信号完整性问题
+    {
+        const int W = width_;
+        const int H = height_;
+        const lv_color_t white = lv_color_hex(0xFFFFFF);
+        const lv_color_t gray = lv_color_hex(0x808080);
+
+        selftest_ = lv_obj_create(screen);
+        lv_obj_set_size(selftest_, W, H);
+        lv_obj_set_pos(selftest_, 0, 0);
+        lv_obj_set_style_bg_color(selftest_, lv_color_hex(0x000000), 0);
+        lv_obj_set_style_bg_opa(selftest_, LV_OPA_COVER, 0);
+        lv_obj_set_style_border_width(selftest_, 0, 0);
+        lv_obj_set_style_radius(selftest_, 0, 0);
+        lv_obj_set_style_pad_all(selftest_, 0, 0);
+        lv_obj_clear_flag(selftest_, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_clear_flag(selftest_, LV_OBJ_FLAG_CLICKABLE);
+
+        // 2px 外框（四条边分别画，便于判断哪条缺失）
+        AddRect(selftest_, 0, 0, W, 2, white);
+        AddRect(selftest_, 0, H - 2, W, 2, white);
+        AddRect(selftest_, 0, 0, 2, H, white);
+        AddRect(selftest_, W - 2, 0, 2, H, white);
+
+        // 四角 16x16 色块：红 / 绿 / 蓝 / 白
+        AddRect(selftest_, 4, 4, 16, 16, lv_color_hex(0xFF0000));
+        AddRect(selftest_, W - 20, 4, 16, 16, lv_color_hex(0x00FF00));
+        AddRect(selftest_, 4, H - 20, 16, 16, lv_color_hex(0x0000FF));
+        AddRect(selftest_, W - 20, H - 20, 16, 16, white);
+
+        // 中心十字
+        AddRect(selftest_, 0, H / 2 - 1, W, 2, gray);
+        AddRect(selftest_, W / 2 - 1, 0, 2, H, gray);
+
+        // 顶部 / 左侧刻度，每 20px 一格，方便数像素判断是否被裁切
+        for (int x = 20; x < W - 20; x += 20) AddRect(selftest_, x, 2, 1, 8, gray);
+        for (int y = 20; y < H - 20; y += 20) AddRect(selftest_, 2, y, 8, 1, gray);
+
+        lv_timer_t* st = lv_timer_create(SelfTestTimerCb, CHARACTER_SELFTEST_MS, this);
+        if (st != nullptr) lv_timer_set_repeat_count(st, 1);
+    }
+
     // 嘴部小贴片：静止时隐藏，说话时显示一个深色张嘴形状
     mouth_ = lv_obj_create(screen);
     lv_obj_set_size(mouth_, MOUTH_W, MOUTH_OPEN_H);
@@ -98,10 +165,21 @@ void CharacterLcdDisplay::SetupUI() {
     ui_timer_ = lv_timer_create(UiTimerCb, UI_TICK_MS, this);
 
     ESP_LOGI(CHARACTER_TAG,
-             "ready: screen %dx%d, bg %dx%d (static, never re-set), mouth patch %dx%d",
+             "ready: screen %dx%d, bg %dx%d cf=%d stride=%d, offset(%d,%d) mirror(%d,%d) swap=%d, "
+             "spi=10MHz selftest=%dms mouth=%dx%d",
              (int)lv_obj_get_width(screen), (int)lv_obj_get_height(screen),
              (int)rabbit_neutral.header.w, (int)rabbit_neutral.header.h,
-             MOUTH_W, MOUTH_OPEN_H);
+             (int)rabbit_neutral.header.cf, (int)rabbit_neutral.header.stride,
+             offset_x_, offset_y_, (int)mirror_x_, (int)mirror_y_, (int)swap_xy_,
+             CHARACTER_SELFTEST_MS, MOUTH_W, MOUTH_OPEN_H);
+}
+
+void CharacterLcdDisplay::SelfTestTimerCb(lv_timer_t* t) {
+    auto* self = static_cast<CharacterLcdDisplay*>(lv_timer_get_user_data(t));
+    if (self == nullptr || self->selftest_ == nullptr) return;
+    lv_obj_del(self->selftest_);
+    self->selftest_ = nullptr;
+    ESP_LOGI(CHARACTER_TAG, "selftest removed, rabbit background visible");
 }
 
 void CharacterLcdDisplay::UiTimerCb(lv_timer_t* t) {

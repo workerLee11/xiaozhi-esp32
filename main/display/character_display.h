@@ -4,6 +4,9 @@
 
 #include "lcd_display.h"
 
+// 开机自检画面显示时长（毫秒）。仅用于诊断，之后自动删除。
+#define CHARACTER_SELFTEST_MS 6000
+
 // 角色屏显示：在官方面包板 LCD 板型上叠加一只「会说话的兔子」。
 //
 // 线程模型：
@@ -34,7 +37,15 @@ public:
 
 private:
     lv_obj_t* mouth_ = nullptr;           // 嘴部小贴片（screen 上，仅 26x15 像素）
+    lv_obj_t* selftest_ = nullptr;        // 开机自检画面（数秒后自动删除）
     lv_timer_t* ui_timer_ = nullptr;      // 常驻 LVGL timer，统一应用状态
+
+    // 板级显示参数，仅用于启动日志诊断
+    int offset_x_ = 0;
+    int offset_y_ = 0;
+    bool mirror_x_ = false;
+    bool mirror_y_ = false;
+    bool swap_xy_ = false;
 
     // 跨线程写入，仅此两处；绝不在写入方调用 LVGL
     std::atomic<bool> talking_{false};
@@ -45,4 +56,5 @@ private:
     int applied_emotion_ = 0;
 
     static void UiTimerCb(lv_timer_t* t);
+    static void SelfTestTimerCb(lv_timer_t* t);
 };
