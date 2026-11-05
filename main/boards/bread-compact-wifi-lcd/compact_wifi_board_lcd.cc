@@ -9,6 +9,7 @@
 #include "mcp_server.h"
 #include "lamp_controller.h"
 #include "led/single_led.h"
+#include "adc_battery_monitor.h"
 
 #include <esp_log.h>
 #include <driver/i2c_master.h>
@@ -174,6 +175,22 @@ public:
     virtual Display* GetDisplay() override {
         return display_;
     }
+
+    // 800mAh 1S 锂电池经 100k/100k 分压后由 GPIO1(ADC1_CH0) 采样。
+    // 使用官方现成的 AdcBatteryMonitor：内部 1Hz 采样 + ESP-IDF 的电压-电量曲线，
+    // GetBatteryLevel() 只是读缓存，所以官方状态栏每秒调用也不会增加 ADC 负担。
+#if BATTERY_GAUGE_ENABLED
+    virtual bool GetBatteryLevel(int& level, bool& charging, bool& discharging) override {
+        static AdcBatteryMonitor battery_monitor(
+            BATTERY_ADC_UNIT, BATTERY_ADC_CHANNEL,
+            BATTERY_UPPER_RESISTOR, BATTERY_LOWER_RESISTOR,
+            BATTERY_CHARGING_GPIO);
+        level = battery_monitor.GetBatteryLevel();
+        charging = battery_monitor.IsCharging();
+        discharging = battery_monitor.IsDischarging();
+        return true;
+    }
+#endif
 
     virtual Backlight* GetBacklight() override {
         if (DISPLAY_BACKLIGHT_PIN != GPIO_NUM_NC) {

@@ -7,6 +7,10 @@
 // 开机自检画面显示时长（毫秒）。仅用于诊断，之后自动删除。
 #define CHARACTER_SELFTEST_MS 6000
 
+// 顶栏电量百分比的刷新周期（毫秒）。电量变化很慢，30 秒足够；
+// 只有百分比数字或充电状态真正变化时才调用 lv_label_set_text。
+#define CHARACTER_BATTERY_REFRESH_MS 30000
+
 // 角色屏显示：在官方面包板 LCD 板型上叠加一只「会说话的兔子」。
 //
 // 线程模型：
@@ -40,6 +44,11 @@ private:
     lv_obj_t* selftest_ = nullptr;        // 开机自检画面（数秒后自动删除）
     lv_timer_t* ui_timer_ = nullptr;      // 常驻 LVGL timer，统一应用状态
 
+    // 顶栏电量百分比：跟在官方 battery_label_（电池图标）右侧的小号数字，
+    // 同一个 flex 容器内自动排布，不需要手动定位。
+    lv_obj_t* battery_pct_ = nullptr;
+    lv_timer_t* battery_timer_ = nullptr;
+
     // 板级显示参数，仅用于启动日志诊断
     int offset_x_ = 0;
     int offset_y_ = 0;
@@ -55,6 +64,11 @@ private:
     bool applied_talking_ = false;
     int applied_emotion_ = 0;
 
+    // 电量文本缓存，避免百分比没变时反复 set text 触发重绘
+    char last_battery_text_[8] = {0};
+    bool last_charging_ = false;
+
     static void UiTimerCb(lv_timer_t* t);
     static void SelfTestTimerCb(lv_timer_t* t);
+    static void BatteryTimerCb(lv_timer_t* t);
 };

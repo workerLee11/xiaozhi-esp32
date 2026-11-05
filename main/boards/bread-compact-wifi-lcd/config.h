@@ -2,6 +2,7 @@
 #define _BOARD_CONFIG_H_
 
 #include <driver/gpio.h>
+#include <esp_adc/adc_oneshot.h>  // adc_unit_t / adc_channel_t（电池分压检测用）
 
 #define AUDIO_INPUT_SAMPLE_RATE  16000
 #define AUDIO_OUTPUT_SAMPLE_RATE 24000
@@ -282,6 +283,30 @@
 #define DISPLAY_SPI_MODE 0
 #endif
 
+
+// ---- 电池电量检测（800mAh 单节锂电池 + 电阻分压）----
+//
+// 接线（1S 锂电，满电 4.2V，超过 ESP32 的 3.3V 量程，必须分压再进 ADC）：
+//
+//   电池正极(BAT+) --[ R_up 100k ]--+--[ R_down 100k ]-- GND
+//                                   |
+//                              GPIO1 (ADC1_CH0)
+//
+// 分压比 1:1，4.2V -> 2.1V，安全且落在 ADC 12dB 衰减的线性区内。
+// 注意：ESP32-S3 的 ADC2 在 Wi-Fi 工作时不可用，所以只能用 ADC1（GPIO1~GPIO10）。
+// 如果实际用的是别的 GPIO，只改 BATTERY_ADC_CHANNEL 即可（GPIO1=CH0, GPIO2=CH1 ...）。
+//
+// 若电池模块（如 TP4056）的 CHRG 引脚接到了某个 GPIO，把 BATTERY_CHARGING_GPIO
+// 改成对应引脚号就能显示充电状态；没接就保持 GPIO_NUM_NC（此时靠电压判断是否在充电上升）。
+#define BATTERY_ADC_UNIT        ADC_UNIT_1
+#define BATTERY_ADC_CHANNEL     ADC_CHANNEL_0   // GPIO1
+#define BATTERY_UPPER_RESISTOR  100000.0f       // R_up  100k
+#define BATTERY_LOWER_RESISTOR  100000.0f       // R_down 100k
+#define BATTERY_CHARGING_GPIO   GPIO_NUM_NC
+
+// 总开关：0 = 完全不采集电量（顶栏不显示百分比，也不会有低电量提示音）。
+// 分压线还没接好时可以先设为 0，接好后再改回 1 重编。
+#define BATTERY_GAUGE_ENABLED   1
 
 // A MCP Test: Control a lamp
 #define LAMP_GPIO GPIO_NUM_18

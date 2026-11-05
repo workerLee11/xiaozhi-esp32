@@ -1,14 +1,20 @@
 #include "character_display.h"
 #include "character_assets.h"
 #include "display.h"
+#include "board.h"
 
 #include <esp_log.h>
 
+#include <cstdio>
+#include <cstring>
 #include <string>
 
 #include "lvgl.h"
 
 #define CHARACTER_TAG "CharacterLcd"
+
+// 顶部栏电量数字用文本字体（图标字体里没有 0-9 和 %）
+LV_FONT_DECLARE(BUILTIN_TEXT_FONT);
 
 // 状态轮询周期。绝大多数 tick 完全不重绘；只有状态真正变化时才动一下嘴部贴片。
 #define UI_TICK_MS 100
@@ -64,6 +70,10 @@ CharacterLcdDisplay::~CharacterLcdDisplay() {
     if (ui_timer_ != nullptr) {
         lv_timer_del(ui_timer_);
         ui_timer_ = nullptr;
+    }
+    if (battery_timer_ != nullptr) {
+        lv_timer_del(battery_timer_);
+        battery_timer_ = nullptr;
     }
 }
 
@@ -164,6 +174,31 @@ void CharacterLcdDisplay::SetupUI() {
     // 常驻定时器：只在 LVGL 线程里读标志、改嘴部贴片
     ui_timer_ = lv_timer_create(UiTimerCb, UI_TICK_MS, this);
 
+    // ---- 顶栏电量百分比（官方电池图标 + 数字）----
+    // 官方 battery_label_ 只放图标字符（图标字体里没有 0-9 和 %），
+    // 这里在它右侧补一个文本 label。两者同在 right_icons 这个 flex 容器里，
+    // 会自动从左到右排布，因此不需要手动定位，也不会影响左侧的网络图标。
+    if (battery_label_ != nullptr) {
+        lv_obj_t* icons = lv_obj_get_parent(battery_label_);
+        battery_pct_ = lv_label_create(icons);
+        lv_obj_set_style_text_font(battery_pct_, &BUILTIN_TEXT_FONT, 0);
+        // 初始颜色跟随官方图标，保证和电池图标同色
+        lv_obj_set_style_text_color(battery_pct_,
+                                    lv_obj_get_style_text_color(battery_label_, 0), 0);
+        lv_obj_set_style_margin_left(battery_pct_, 3, 0);
+        // 固定宽度 + 右对齐：百分比从 9% 变 10% 时宽度不变，
+        // 避免 flex 容器重新排布导致顶栏更大面积重绘。
+        lv_obj_set_width(battery_pct_, 34);
+        lv_obj_set_style_text_align(battery_pct_, LV_TEXT_ALIGN_RIGHT, 0);
+        lv_label_set_text(battery_pct_, "");
+        lv_obj_add_flag(battery_pct_, LV_OBJ_FLAG_HIDDEN);  // 读到真实电量后再显示
+
+        battery_timer_ = lv_timer_create(BatteryTimerCb, CHARACTER_BATTERY_REFRESH_MS, this);
+        if (battery_timer_ != nullptr) {
+            lv_timer_ready(battery_timer_);  // 不等 30 秒，下个 tick 先读一次
+        }
+    }
+
     ESP_LOGI(CHARACTER_TAG,
              "ready: screen %dx%d, bg %dx%d cf=%d stride=%d, offset(%d,%d) mirror(%d,%d) swap=%d, "
              "spi=10MHz selftest=%dms mouth=%dx%d",
@@ -180,6 +215,56 @@ void CharacterLcdDisplay::SelfTestTimerCb(lv_timer_t* t) {
     lv_obj_del(self->selftest_);
     self->selftest_ = nullptr;
     ESP_LOGI(CHARACTER_TAG, "selftest removed, rabbit background visible");
+}
+
+void CharacterLcdDisplay::BatteryTimerCb(lv_timer_t* t) {
+    auto* self = static_cast<CharacterLcdDisplay*>(lv_timer_get_user_data(t));
+    if (self == nullptr || self->battery_pct_ == nullptr) return;
+
+    int level = 0;
+    bool charging = false;
+    bool discharging = false;
+
+    if (!Board::GetInstance().GetBatteryLevel(level, charging, discharging)) {
+        // 板型没有实现电量采集：保持隐藏，绝不显示编造的数字
+        if (!lv_obj_has_flag(self->battery_pct_, LV_OBJ_FLAG_HIDDEN)) {
+            lv_obj_add_flag(self->battery_pct_, LV_OBJ_FLAG_HIDDEN);
+            ESP_LOGW(CHARACTER_TAG, "battery: not available on this board, gauge hidden");
+        }
+        return;
+    }
+
+    if (level < 0) level = 0;
+    if (level > 100) level = 100;
+
+    char buf[8];
+    snprintf(buf, sizeof(buf), "%d%%", level);
+
+    // 数字和充电状态都没变：直接返回，静止时零重绘
+    if (strcmp(buf, self->last_battery_text_) == 0 && charging == self->last_charging_) {
+        return;
+    }
+
+    strncpy(self->last_battery_text_, buf, sizeof(self->last_battery_text_) - 1);
+    self->last_battery_text_[sizeof(self->last_battery_text_) - 1] = '\0';
+    self->last_charging_ = charging;
+
+    // 配色：充电 -> 绿；低电量（<=20%）-> 橙红；其余跟随官方电池图标色
+    lv_color_t color = lv_obj_get_style_text_color(self->battery_pct_, 0);
+    if (charging) {
+        color = lv_color_hex(0x1D9E75);
+    } else if (level <= 20) {
+        color = lv_color_hex(0xD85A30);
+    } else if (self->battery_label_ != nullptr) {
+        color = lv_obj_get_style_text_color(self->battery_label_, 0);
+    }
+
+    lv_obj_set_style_text_color(self->battery_pct_, color, 0);
+    lv_label_set_text(self->battery_pct_, buf);
+    lv_obj_remove_flag(self->battery_pct_, LV_OBJ_FLAG_HIDDEN);
+
+    ESP_LOGI(CHARACTER_TAG, "battery -> %d%%%s, dirty area ~28x18 only (top bar)", level,
+             charging ? " charging" : (discharging ? " discharging" : ""));
 }
 
 void CharacterLcdDisplay::UiTimerCb(lv_timer_t* t) {
